@@ -694,7 +694,11 @@ pub enum Error {
         path: String,
         source: Box<dyn std::error::Error + Send + Sync + 'static>,
     },
-
+    #[snafu(display("Object at location {} forbidden: {}", path, source))]
+    Forbidden {
+        path: String,
+        source: Box<dyn std::error::Error + Send + Sync + 'static>,
+    },
     #[snafu(
         display("Encountered object with invalid path: {}", source),
         context(false)

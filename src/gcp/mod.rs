@@ -174,6 +174,24 @@ impl From<Error> for super::Error {
                 }
 
             }
+            Error::GetRequest { source, path }
+            | Error::DeleteRequest { source, path }
+            | Error::CopyRequest { source, path }
+                if matches!(source.status(), Some(StatusCode::FORBIDDEN)) =>
+            {
+                Self::Forbidden {
+                    path,
+                    source: Box::new(source),
+                }
+            }
+            Error::ListRequest { source } if matches!(source.status(), Some(StatusCode::FORBIDDEN)) => 
+            {
+                Self::Forbidden {
+                    path: "".to_string(),
+                    source: Box::new(source),
+                }
+
+            }
             Error::AlreadyExists { source, path } => Self::AlreadyExists {
                 source: Box::new(source),
                 path,
