@@ -252,17 +252,17 @@ struct GoogleCloudStorageClient {
 }
 
 impl GoogleCloudStorageClient {
-    async fn get_token(&self) -> Result<String> {
+    async fn get_token(&self) -> Result<Option<String>> {
         if let Some(token_provider) = &self.token_provider {
-            Ok(self
+            Ok(Some(self
                 .token_cache
                 .get_or_insert_with(|| {
                     token_provider.fetch_token(&self.client, &self.retry_config)
                 })
                 .await
-                .context(CredentialSnafu)?)
+                .context(CredentialSnafu)?))
         } else {
-            Ok("".to_owned())
+            Ok(None)
         }
     }
 
@@ -296,9 +296,11 @@ impl GoogleCloudStorageClient {
             false => "media",
         };
 
-        let response = builder
-            .bearer_auth(token)
-            .query(&[("alt", alt)])
+        let mut response = builder.query(&[("alt", alt)]);
+        if let Some(token) = token {
+            response = response.bearer_auth(token);
+        }
+        let response = response
             .send_retry(&self.retry_config)
             .await
             .context(GetRequestSnafu {
@@ -321,14 +323,17 @@ impl GoogleCloudStorageClient {
             .get_content_type(path)
             .unwrap_or("application/octet-stream");
 
-        self.client
+        let mut response = self.client
             .request(Method::POST, url)
-            .bearer_auth(token)
             .header(header::CONTENT_TYPE, content_type)
             .header(header::CONTENT_LENGTH, payload.len())
             .query(&[("uploadType", "media"), ("name", path.as_ref())])
-            .body(payload)
-            .send_retry(&self.retry_config)
+            .body(payload);
+
+        if let Some(token) = token {
+            response = response.bearer_auth(token);
+        }
+        response.send_retry(&self.retry_config)
             .await
             .context(PutRequestSnafu)?;
 
@@ -345,14 +350,16 @@ impl GoogleCloudStorageClient {
             .get_content_type(path)
             .unwrap_or("application/octet-stream");
 
-        let response = self
+        let mut response = self
             .client
             .request(Method::POST, &url)
-            .bearer_auth(token)
             .header(header::CONTENT_TYPE, content_type)
             .header(header::CONTENT_LENGTH, "0")
-            .query(&[("uploads", "")])
-            .send_retry(&self.retry_config)
+            .query(&[("uploads", "")]);
+        if let Some(token) = token {
+            response = response.bearer_auth(token);
+        }
+        let response = response.send_retry(&self.retry_config)
             .await
             .context(PutRequestSnafu)?;
 
@@ -378,13 +385,15 @@ impl GoogleCloudStorageClient {
         let token = self.get_token().await?;
         let url = format!("{}/{}/{}", self.base_url, self.bucket_name_encoded, path);
 
-        self.client
+        let mut response = self.client
             .request(Method::DELETE, &url)
-            .bearer_auth(token)
             .header(header::CONTENT_TYPE, "application/octet-stream")
             .header(header::CONTENT_LENGTH, "0")
-            .query(&[("uploadId", multipart_id)])
-            .send_retry(&self.retry_config)
+            .query(&[("uploadId", multipart_id)]);
+        if let Some(token) = token {
+            response = response.bearer_auth(token);
+        }
+        response.send_retry(&self.retry_config)
             .await
             .context(PutRequestSnafu)?;
 
@@ -396,10 +405,11 @@ impl GoogleCloudStorageClient {
         let token = self.get_token().await?;
         let url = self.object_url(path);
 
-        let builder = self.client.request(Method::DELETE, url);
-        builder
-            .bearer_auth(token)
-            .send_retry(&self.retry_config)
+        let mut response = self.client.request(Method::DELETE, url);
+        if let Some(token) = token {
+            response = response.bearer_auth(token);
+        }
+        response.send_retry(&self.retry_config)
             .await
             .context(DeleteRequestSnafu {
                 path: path.as_ref(),
@@ -436,8 +446,10 @@ impl GoogleCloudStorageClient {
             builder = builder.query(&[("ifGenerationMatch", "0")]);
         }
 
+        if let Some(token) = token {
+            builder = builder.bearer_auth(token);
+        }
         builder
-            .bearer_auth(token)
             // Needed if reqwest is compiled with native-tls instead of rustls-tls
             // See https://github.com/apache/arrow-rs/pull/3921
             .header(header::CONTENT_LENGTH, 0)
@@ -495,11 +507,14 @@ impl GoogleCloudStorageClient {
             query.push(("maxResults", max_results))
         }
 
-        let response: ListResponse = self
+        let mut response = self
             .client
             .request(Method::GET, url)
-            .query(&query)
-            .bearer_auth(token)
+            .query(&query);
+        if let Some(token) = token {
+            response = response.bearer_auth(token);
+        }
+        let response: ListResponse = response
             .send_retry(&self.retry_config)
             .await
             .context(ListRequestSnafu)?
@@ -554,19 +569,21 @@ impl CloudMultiPartUploadImpl for GCSMultipartUpload {
             .await
             .map_err(|err| io::Error::new(io::ErrorKind::Other, err))?;
 
-        let response = self
+        let mut response = self
             .client
             .client
             .request(Method::PUT, &url)
-            .bearer_auth(token)
             .query(&[
                 ("partNumber", format!("{}", part_idx + 1)),
                 ("uploadId", upload_id),
             ])
             .header(header::CONTENT_TYPE, "application/octet-stream")
             .header(header::CONTENT_LENGTH, format!("{}", buf.len()))
-            .body(buf)
-            .send_retry(&self.client.retry_config)
+            .body(buf);
+        if let Some(token) = token {
+            response = response.bearer_auth(token);
+        }
+        let response = response.send_retry(&self.client.retry_config)
             .await?;
 
         let content_id = response
@@ -617,13 +634,15 @@ impl CloudMultiPartUploadImpl for GCSMultipartUpload {
             // https://github.com/tafia/quick-xml/issues/350
             .replace("&quot;", "\"");
 
-        self.client
+        let mut response = self.client
             .client
             .request(Method::POST, &url)
-            .bearer_auth(token)
             .query(&[("uploadId", upload_id)])
-            .body(data)
-            .send_retry(&self.client.retry_config)
+            .body(data);
+        if let Some(token) = token {
+            response = response.bearer_auth(token);
+        }
+        response.send_retry(&self.client.retry_config)
             .await?;
 
         Ok(())
@@ -782,6 +801,8 @@ pub struct GoogleCloudStorageBuilder {
     retry_config: RetryConfig,
     /// Client options
     client_options: ClientOptions,
+    /// Unauthenticated requests
+    disable_authentication: bool,
 }
 
 /// Configuration keys for [`GoogleCloudStorageBuilder`]
@@ -885,6 +906,7 @@ impl Default for GoogleCloudStorageBuilder {
             retry_config: Default::default(),
             client_options: ClientOptions::new().with_allow_http(true),
             url: None,
+            disable_authentication: false,
         }
     }
 }
@@ -1038,6 +1060,12 @@ impl GoogleCloudStorageBuilder {
         self
     }
 
+    /// Disable authentication
+    pub fn disable_authentication(mut self, disable: bool) -> Self {
+        self.disable_authentication = disable;
+        self
+    }
+
     /// Set the path to the service account file.
     ///
     /// This or [`GoogleCloudStorageBuilder::with_service_account_key`] must be
@@ -1152,7 +1180,7 @@ impl GoogleCloudStorageBuilder {
         let scope = "https://www.googleapis.com/auth/devstorage.full_control";
         let audience = "https://www.googleapis.com/oauth2/v4/token";
 
-        let token_provider = if disable_oauth {
+        let token_provider = if self.disable_authentication || disable_oauth {
             None
         } else {
             let best_provider = if let Some(credentials) = service_account_credentials {
