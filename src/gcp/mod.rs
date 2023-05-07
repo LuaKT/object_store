@@ -166,6 +166,14 @@ impl From<Error> for super::Error {
                     source: Box::new(source),
                 }
             }
+            Error::ListRequest { source } if matches!(source.status(), Some(StatusCode::NOT_FOUND)) => 
+            {
+                Self::NotFound {
+                    path: "".to_string(),
+                    source: Box::new(source),
+                }
+
+            }
             Error::AlreadyExists { source, path } => Self::AlreadyExists {
                 source: Box::new(source),
                 path,
