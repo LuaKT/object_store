@@ -829,6 +829,8 @@ pub struct GoogleCloudStorageBuilder {
     client_options: ClientOptions,
     /// Unauthenticated requests
     disable_authentication: bool,
+    /// Max list results
+    max_list_results: Option<String>,
 }
 
 /// Configuration keys for [`GoogleCloudStorageBuilder`]
@@ -933,6 +935,7 @@ impl Default for GoogleCloudStorageBuilder {
             client_options: ClientOptions::new().with_allow_http(true),
             url: None,
             disable_authentication: false,
+            max_list_results: None,
         }
     }
 }
@@ -1083,6 +1086,12 @@ impl GoogleCloudStorageBuilder {
     /// Set the bucket name (required)
     pub fn with_bucket_name(mut self, bucket_name: impl Into<String>) -> Self {
         self.bucket_name = Some(bucket_name.into());
+        self
+    }
+
+    /// Set the bucket name (required)
+    pub fn with_max_list_results(mut self, max_list_results: String) -> Self {
+        self.max_list_results = Some(max_list_results);
         self
     }
 
@@ -1244,7 +1253,7 @@ impl GoogleCloudStorageBuilder {
                 bucket_name_encoded: encoded_bucket_name,
                 retry_config: self.retry_config,
                 client_options: self.client_options,
-                max_list_results: None,
+                max_list_results: self.max_list_results,
             }),
         })
     }
