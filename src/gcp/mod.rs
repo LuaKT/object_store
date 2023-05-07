@@ -177,14 +177,15 @@ impl From<Error> for super::Error {
             Error::GetRequest { source, path }
             | Error::DeleteRequest { source, path }
             | Error::CopyRequest { source, path }
-                if matches!(source.status(), Some(StatusCode::FORBIDDEN)) =>
+                if matches!(source.status(), Some(StatusCode::FORBIDDEN)) || matches!(source.status(), Some(StatusCode::UNAUTHORIZED)) =>
             {
                 Self::Forbidden {
                     path,
                     source: Box::new(source),
                 }
             }
-            Error::ListRequest { source } if matches!(source.status(), Some(StatusCode::FORBIDDEN)) => 
+            Error::ListRequest { source }
+                if matches!(source.status(), Some(StatusCode::FORBIDDEN)) || matches!(source.status(), Some(StatusCode::UNAUTHORIZED)) => 
             {
                 Self::Forbidden {
                     path: "".to_string(),
