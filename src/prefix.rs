@@ -133,6 +133,12 @@ impl<T: ObjectStore> ObjectStore for PrefixStore<T> {
             })
             .boxed())
     }
+    async fn list_versions(
+        &self,
+        prefix: Option<&Path>,
+    ) -> ObjectStoreResult<BoxStream<'_, ObjectStoreResult<ObjectMeta>>> {
+        self.list(prefix).await
+    }
 
     async fn list_with_delimiter(
         &self,

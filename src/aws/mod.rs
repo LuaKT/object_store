@@ -286,6 +286,21 @@ impl ObjectStore for AmazonS3 {
         Ok(stream)
     }
 
+    // TODO: Make this actually return versions
+    async fn list_versions(
+        &self,
+        prefix: Option<&Path>,
+    ) -> Result<BoxStream<'_, Result<ObjectMeta>>> {
+        let stream = self
+            .client
+            .list_paginated(prefix, false, None)
+            .map_ok(|r| futures::stream::iter(r.objects.into_iter().map(Ok)))
+            .try_flatten()
+            .boxed();
+
+        Ok(stream)
+    }
+
     async fn list_with_offset(
         &self,
         prefix: Option<&Path>,

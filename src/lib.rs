@@ -377,6 +377,16 @@ pub trait ObjectStore: std::fmt::Display + Send + Sync + Debug + 'static {
         &self,
         prefix: Option<&Path>,
     ) -> Result<BoxStream<'_, Result<ObjectMeta>>>;
+    /// List all the objects with all versions as distinct results with the given prefix.
+    ///
+    /// Prefixes are evaluated on a path segment basis, i.e. `foo/bar/` is a prefix of `foo/bar/x` but not of
+    /// `foo/bar_baz/x`.
+    ///
+    /// Note: the order of returned [`ObjectMeta`] is not guaranteed
+    async fn list_versions(
+        &self,
+        prefix: Option<&Path>,
+    ) -> Result<BoxStream<'_, Result<ObjectMeta>>>;
 
     /// List all the objects with the given prefix and a location greater than `offset`
     ///
@@ -497,6 +507,13 @@ impl ObjectStore for Box<dyn ObjectStore> {
         prefix: Option<&Path>,
     ) -> Result<BoxStream<'_, Result<ObjectMeta>>> {
         self.as_ref().list(prefix).await
+    }
+
+    async fn list_versions(
+        &self,
+        prefix: Option<&Path>,
+    ) -> Result<BoxStream<'_, Result<ObjectMeta>>> {
+        self.as_ref().list_versions(prefix).await
     }
 
     async fn list_with_offset(

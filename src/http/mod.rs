@@ -181,6 +181,27 @@ impl ObjectStore for HttpStore {
         .boxed())
     }
 
+    async fn list_versions(
+        &self,
+        prefix: Option<&Path>,
+    ) -> Result<BoxStream<'_, Result<ObjectMeta>>> {
+        let prefix_len = prefix.map(|p| p.as_ref().len()).unwrap_or_default();
+        let status = self.client.list(prefix, "infinity").await?;
+        Ok(futures::stream::iter(
+            status
+                .response
+                .into_iter()
+                .filter(|r| !r.is_dir())
+                .map(|response| {
+                    response.check_ok()?;
+                    response.object_meta(self.client.base_url())
+                })
+                // Filter out exact prefix matches
+                .filter_ok(move |r| r.location.as_ref().len() > prefix_len),
+        )
+        .boxed())
+    }
+
     async fn list_with_delimiter(&self, prefix: Option<&Path>) -> Result<ListResult> {
         let status = self.client.list(prefix, "1").await?;
         let prefix_len = prefix.map(|p| p.as_ref().len()).unwrap_or(0);

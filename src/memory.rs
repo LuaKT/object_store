@@ -206,6 +206,13 @@ impl ObjectStore for InMemory {
         Ok(futures::stream::iter(values).boxed())
     }
 
+    async fn list_versions(
+        &self,
+        prefix: Option<&Path>,
+    ) -> Result<BoxStream<'_, Result<ObjectMeta>>> {
+        self.list(prefix).await
+    }
+
     /// The memory implementation returns all results, as opposed to the cloud
     /// versions which limit their results to 1k or more because of API
     /// limitations.

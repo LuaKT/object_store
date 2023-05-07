@@ -242,6 +242,13 @@ impl<T: ObjectStore> ObjectStore for ThrottledStore<T> {
         Ok(throttle_stream(stream, move |_| wait_list_per_entry))
     }
 
+    async fn list_versions(
+        &self,
+        prefix: Option<&Path>,
+    ) -> Result<BoxStream<'_, Result<ObjectMeta>>> {
+        self.list(prefix).await
+    }
+
     async fn list_with_offset(
         &self,
         prefix: Option<&Path>,

@@ -147,6 +147,15 @@ impl<T: ObjectStore> ObjectStore for LimitStore<T> {
         Ok(PermitWrapper::new(s, permit).boxed())
     }
 
+    async fn list_versions(
+        &self,
+        prefix: Option<&Path>,
+    ) -> Result<BoxStream<'_, Result<ObjectMeta>>> {
+        let permit = Arc::clone(&self.semaphore).acquire_owned().await.unwrap();
+        let s = self.inner.list(prefix).await?;
+        Ok(PermitWrapper::new(s, permit).boxed())
+    }
+
     async fn list_with_offset(
         &self,
         prefix: Option<&Path>,

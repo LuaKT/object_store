@@ -29,7 +29,7 @@
 //! to abort the upload and drop those unneeded parts. In addition, you may wish to
 //! consider implementing automatic clean up of unused parts that are older than one
 //! week.
-use std::collections::BTreeSet;
+use std::collections::{BTreeSet, HashMap};
 use std::io;
 use std::ops::Range;
 use std::str::FromStr;
@@ -191,13 +191,16 @@ struct ListResponse {
     items: Vec<Object>,
 }
 
+
 #[derive(serde::Deserialize, Debug)]
 struct Object {
     name: String,
+    generation: String,
     size: String,
     updated: DateTime<Utc>,
     #[serde(rename = "etag")]
     e_tag: Option<String>,
+    metadata: Option<HashMap<String, String>>,
 }
 
 #[derive(serde::Deserialize, Debug)]
@@ -481,19 +484,23 @@ impl GoogleCloudStorageClient {
         &self,
         prefix: Option<&str>,
         delimiter: bool,
+        versions: bool,
         page_token: Option<&str>,
     ) -> Result<ListResponse> {
         let token = self.get_token().await?;
+        let versions = versions.to_string();
 
         let url = format!(
             "{}/storage/v1/b/{}/o",
             self.base_url, self.bucket_name_encoded
         );
 
-        let mut query = Vec::with_capacity(4);
+        let mut query = Vec::with_capacity(5);
         if delimiter {
             query.push(("delimiter", DELIMITER))
         }
+
+        query.push(("versions", &versions));
 
         if let Some(prefix) = &prefix {
             query.push(("prefix", prefix))
@@ -530,11 +537,12 @@ impl GoogleCloudStorageClient {
         &self,
         prefix: Option<&Path>,
         delimiter: bool,
+        versions: bool,
     ) -> BoxStream<'_, Result<ListResponse>> {
         let prefix = format_prefix(prefix);
         stream_paginated(prefix, move |prefix, token| async move {
             let mut r = self
-                .list_request(prefix.as_deref(), delimiter, token.as_deref())
+                .list_request(prefix.as_deref(), delimiter, versions, token.as_deref())
                 .await?;
             let next_token = r.next_page_token.take();
             Ok((r, prefix, next_token))
@@ -726,7 +734,25 @@ impl ObjectStore for GoogleCloudStorage {
     ) -> Result<BoxStream<'_, Result<ObjectMeta>>> {
         let stream = self
             .client
-            .list_paginated(prefix, false)
+            .list_paginated(prefix, false, false)
+            .map_ok(|r| {
+                futures::stream::iter(
+                    r.items.into_iter().map(|x| convert_object_meta(&x)),
+                )
+            })
+            .try_flatten()
+            .boxed();
+
+        Ok(stream)
+    }
+
+    async fn list_versions(
+        &self,
+        prefix: Option<&Path>,
+    ) -> Result<BoxStream<'_, Result<ObjectMeta>>> {
+        let stream = self
+            .client
+            .list_paginated(prefix, false, true)
             .map_ok(|r| {
                 futures::stream::iter(
                     r.items.into_iter().map(|x| convert_object_meta(&x)),
@@ -739,7 +765,7 @@ impl ObjectStore for GoogleCloudStorage {
     }
 
     async fn list_with_delimiter(&self, prefix: Option<&Path>) -> Result<ListResult> {
-        let mut stream = self.client.list_paginated(prefix, true);
+        let mut stream = self.client.list_paginated(prefix, true, false);
 
         let mut common_prefixes = BTreeSet::new();
         let mut objects = Vec::new();
