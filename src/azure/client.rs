@@ -490,6 +490,7 @@ impl TryFrom<Blob> for ObjectMeta {
             last_modified: value.properties.last_modified,
             size: value.properties.content_length as usize,
             e_tag: value.properties.e_tag,
+            version_id: None,
         })
     }
 }

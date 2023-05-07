@@ -341,6 +341,7 @@ impl MultiStatusResponse {
             last_modified,
             size: self.size()?,
             e_tag: self.prop_stat.prop.e_tag.clone(),
+            version_id: None,
         })
     }
 

@@ -109,6 +109,7 @@ impl<T: ObjectStore> ObjectStore for PrefixStore<T> {
             size: meta.size,
             location: self.strip_prefix(&meta.location).unwrap_or(meta.location),
             e_tag: meta.e_tag,
+            version_id: None,
         })
     }
 
@@ -130,6 +131,7 @@ impl<T: ObjectStore> ObjectStore for PrefixStore<T> {
                 size: meta.size,
                 location: self.strip_prefix(&meta.location).unwrap_or(meta.location),
                 e_tag: meta.e_tag,
+                version_id: None,
             })
             .boxed())
     }
@@ -164,6 +166,7 @@ impl<T: ObjectStore> ObjectStore for PrefixStore<T> {
                             size: meta.size,
                             location: self.strip_prefix(&meta.location)?,
                             e_tag: meta.e_tag.clone(),
+                            version_id: None,
                         })
                     })
                     .collect(),

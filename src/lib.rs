@@ -567,6 +567,8 @@ pub struct ObjectMeta {
     pub size: usize,
     /// The unique identifier for the object
     pub e_tag: Option<String>,
+    /// The version id
+    pub version_id: Option<String>,
 }
 
 /// Result for a get request

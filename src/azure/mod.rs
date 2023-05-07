@@ -271,6 +271,7 @@ impl ObjectStore for MicrosoftAzure {
             last_modified,
             size: content_length,
             e_tag: Some(e_tag.to_string()),
+            version_id: None,
         })
     }
 

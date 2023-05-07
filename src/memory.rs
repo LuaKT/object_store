@@ -168,6 +168,7 @@ impl ObjectStore for InMemory {
             last_modified: entry.1,
             size: entry.0.len(),
             e_tag: None,
+            version_id: None,
         })
     }
 
@@ -199,6 +200,7 @@ impl ObjectStore for InMemory {
                     last_modified: value.1,
                     size: value.0.len(),
                     e_tag: None,
+                    version_id: None,
                 })
             })
             .collect();
@@ -250,6 +252,7 @@ impl ObjectStore for InMemory {
                     last_modified: v.1,
                     size: v.0.len(),
                     e_tag: None,
+                    version_id: None,
                 };
                 objects.push(object);
             }

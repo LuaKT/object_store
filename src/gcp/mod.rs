@@ -1272,12 +1272,14 @@ fn convert_object_meta(object: &Object) -> Result<ObjectMeta> {
     let last_modified = object.updated;
     let size = object.size.parse().context(InvalidSizeSnafu)?;
     let e_tag = object.e_tag.clone();
+    let version_id = object.generation.clone();
 
     Ok(ObjectMeta {
         location,
         last_modified,
         size,
         e_tag,
+        version_id: Some(version_id),
     })
 }
 

@@ -910,6 +910,7 @@ fn convert_metadata(metadata: std::fs::Metadata, location: Path) -> Result<Objec
         last_modified,
         size,
         e_tag: None,
+        version_id: None,
     })
 }
 

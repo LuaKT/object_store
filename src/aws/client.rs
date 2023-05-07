@@ -177,6 +177,7 @@ impl TryFrom<ListContents> for ObjectMeta {
             last_modified: value.last_modified,
             size: value.size,
             e_tag: value.e_tag,
+            version_id: None,
         })
     }
 }
