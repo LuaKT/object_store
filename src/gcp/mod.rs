@@ -1090,8 +1090,8 @@ impl GoogleCloudStorageBuilder {
     }
 
     /// Set the bucket name (required)
-    pub fn with_max_list_results(mut self, max_list_results: String) -> Self {
-        self.max_list_results = Some(max_list_results);
+    pub fn with_max_list_results(mut self, max_list_results: impl Into<String>) -> Self {
+        self.max_list_results = Some(max_list_results.into());
         self
     }
 
