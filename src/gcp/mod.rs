@@ -185,6 +185,7 @@ impl From<Error> for super::Error {
                 }
             }
             Error::ListRequest { source }
+            | Error::PutRequest { source }
                 if matches!(source.status(), Some(StatusCode::FORBIDDEN)) || matches!(source.status(), Some(StatusCode::UNAUTHORIZED)) => 
             {
                 Self::Forbidden {
