@@ -151,10 +151,12 @@ impl Path {
 
         let stripped = stripped.strip_suffix(DELIMITER).unwrap_or(stripped);
 
+        /*
         for segment in stripped.split(DELIMITER) {
             ensure!(!segment.is_empty(), EmptySegmentSnafu { path });
             PathPart::parse(segment).context(BadSegmentSnafu { path })?;
         }
+        */
 
         Ok(Self {
             raw: stripped.to_string(),
